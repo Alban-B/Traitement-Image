@@ -1,0 +1,75 @@
+var file_open="";
+var file_mes ="";
+
+var i=1;
+dir="";
+don="";
+
+macro "Detourne Graine" {
+
+// demande ouverture directory ou sont stockes les fichiers
+dir = getDirectory("Choose a Directory ");
+
+// recuperation de la liste des fichiers de la directory
+list = getFileList(dir);
+
+// creation de la directory de données
+don=dir+"/don";
+File.makeDirectory(don)
+
+// debut de la boucle sur les fichiers du repertoire
+ for (i=0; i<list.length; i++) {    
+
+file_open=dir+"/"+list[i];
+
+// definition des fichiers de stockage
+file_mes =don+"/"+list[i]+"_measure.csv";
+
+// ouverture du fichier
+open(file_open);
+run("Rotate 90 Degrees Right");
+
+//run("Duplicate...", "title=[Duplicate_original.jpg]");
+//saveAs("Jpeg", "duplicate.jpg");
+
+//selectWindow("duplicate.jpg");
+//run("Duplicate...", "title=[Duplicate_original.jpg]");
+
+run("HSB Stack");
+run("Convert Stack to Images");
+selectWindow("Brightness");
+close();
+
+selectWindow("Hue");
+setAutoThreshold();
+//run("Threshold...");
+setThreshold(0, 70);
+
+run("Set Scale...", "distance=300 known=2.54 pixel=1 unit=cm global");
+
+run("Set Measurements...", "area centroid center perimeter fit circularity feret's limit display redirect=Saturation decimal=3");
+run("Analyze Particles...", "size=0.05-1 circularity=0.20-0.90 show=Masks display clear include add");
+
+saveAs("Results", file_mes);
+
+selectWindow("Hue");
+close();
+
+selectWindow("Saturation");
+close();
+
+selectWindow("Mask of Hue");
+close();
+
+selectWindow("Results");
+run("Close");
+
+selectWindow("ROI Manager");
+run("Close");
+
+
+// fin de la boucle sur les fichiers
+}
+
+// fin de macro
+}
