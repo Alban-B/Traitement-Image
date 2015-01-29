@@ -1,2 +1,3 @@
 # Traitement-Image
-Ensemble de macros/ fichiers R pour le traitement d'image
+Ensemble de macros Images J/ fichiers R pour le traitement d'image
+
