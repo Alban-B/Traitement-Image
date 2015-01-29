@@ -13,8 +13,6 @@ dir = getDirectory("Choose a Directory ");
 // recuperation de la liste des fichiers de la directory
 list = getFileList(dir);
 
-//setBatchMode(true);
-
 // creation de la directory de données
 don=dir+"/don";
 File.makeDirectory(don)
