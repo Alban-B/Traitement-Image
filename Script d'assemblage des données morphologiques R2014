@@ -1,0 +1,139 @@
+# Script d assemblage des donnees R2014 pour association avec génotypage
+
+
+#setwd("D:/Documents and Settings/David/Mes documents/MEs cours/Rentree 2011/APIMET/TP fil rouge/Donnees/Images/don");
+
+
+rm(list=ls()) #supprime toutes les listes présentes
+
+# le pattern est le point commun des fichiers, on va utiliser "liste"
+# (qui contient la liste de tous les fichiers dans l'ordre alphabétique)
+
+liste<-list.files(pattern="R2014_")
+donTot<-0
+
+## Etape 1 : analyse des fichiers standard à 4 colonnes
+# boucle sur l ensemble des fichiers du répertoire
+for (i in 1:length(liste))
+
+{
+
+don <-read.table(liste[i], head=TRUE, sep="\t", dec=".")
+don
+# Ward Hierarchical Clustering
+# Repérage des 2 zones par recherche de cluster sur la coordonnée en Y
+d <- dist(don$Y, method = "euclidean") # distance matrix
+
+fit <- hclust(d, method="ward.D")
+groups <- cutree(fit, k=2) # coupe  l'arbre en 2 clusters: sillon et côté
+
+# graphiques si nécessaire, mais plante au bout de 60 images
+#X11()
+#plot(fit, main=liste[i])
+#rect.hclust(fit, k=2, border="red") 
+
+# integration de la donnée de groupe dans le fichier de départ
+don<- data.frame(don, groups) 
+
+#print( liste[i])
+#print( aggregate(don$Y,by=list(don$groups),FUN=mean))
+
+
+# découpage des informations contenues dans le titre et creation des variables associees
+# titre sous la forme "R2014_004.bmp_mesure"
+a<-unlist(strsplit(liste[i],".",fixed=TRUE ))
+
+b<-unlist(strsplit(a[1],"_",fixed=TRUE))
+
+don$Genotype<-0
+don$Genotype<-b[2] #pour l'exemple "004"
+
+don$annee<-0
+don$annee<-b[1] #pour l'exemple "2014"
+
+#pas de répetition dans notre cas de figure à supprimer?
+don$rep<-1
+
+# ici on fait l'hypothèse que tous les groupes ont toujours mis les graines dans le même sens et le même ordre
+# non vérifié sur l'ensemble des scanners
+don$posi<-0
+don$posi[which(don$groups==1)]<- "DOS"
+don$posi[which(don$groups==2)]<- "SIL"
+
+#idem pour le moment un seul scan à supprimer?
+don$Scan<-1
+
+# empilage des fichiers dans le fichier DonTot (pas très élégant mais efficace, il doit y avoir mieux)
+donTot<- rbind(donTot, don) 
+
+# fin de la boucle sur les fichiers du repertoire
+}
+
+# suppression 1ere ligne
+donTot<-donTot[-1,]
+
+
+# le nom de fusion avec la table de correspondance des genealogie est lignee 
+names(donTot)[22]<-"lignee"
+
+# verification du nombre de genotypes presents
+#length(donTot[,1])
+#donTot$lignee<-as.factor(as.character(donTot$lignee))
+#length(levels(donTot$lignee))
+
+
+#####
+# fusion avec le fichier de genealogie
+
+#setwd("D:/Documents and Settings/David/Mes documents/MEs cours/Rentree 2011/APIMET/TP fil rouge/Donnees");
+
+X=c("cluster","lignee","AdnAxiom","code2011","code2012","EPO")
+don <-read.table("lignées prioritaires.csv", head=FALSE, sep="\t", dec=".",col.names=X)
+
+#summary(don)
+
+donTot$lignee<-as.numeric(donTot$lignee)
+
+# utilisation de la fonction merge 
+Fusion<-merge(donTot, don[,1:6], by="lignee")
+
+
+#length(Fusion[,1])
+#Fusion$lignee<-as.factor(as.character(Fusion$lignee))
+#length(levels(Fusion$lignee))
+
+#########################################################
+# creation de nouvelles variables
+Fusion$ellipse<-Fusion$Minor/Fusion$Major
+Fusion$Rapport<-Fusion$MinFeret/Fusion$Feret
+#########################################################
+# verification des données et detection visuelles des aberrations les plus grossières
+
+# il y a des objets qui ne sont pas des grains, des grains qui sont collés
+# etude de la solidité
+
+Y<-Fusion
+hist(Y$Solidity)
+
+# on enlève les éléments en dessous de 0.9
+# la fonction which() renvoie une liste de ligne, le signe - supprime les lignes du fichier
+#Y[which(Y$Solidity<0.9), ]
+
+# analyse du périmètre
+#hist(Y$Perim.)
+
+# on enlève les éléments de perimètre supérieur à 2.5, trop gros cet élément est en fait deux grains accolés
+Y<-Y[-which(Y$Perim.>3.5), ]
+
+# on enleve les objets qui ont un perimetre inférieur a 1
+#Y<-Y[-which(Y$Perim.<1), ]
+# et une roundness > à 0.6
+#Y[which(Y$Round>=0.6),1:6]
+
+plot(Y$Perim.~Y$Area)
+
+# le fichier est ecrit et mis a disposition des eleves 
+write.csv2(Y, file = "Donnees_grain.csv", append = FALSE, quote = TRUE, sep = ";",
+            eol = "\n", na = "NA", dec = ".", row.names = TRUE,
+            col.names = TRUE, qmethod = c("escape", "double"))
+
